@@ -13,11 +13,11 @@ app.listen(3000, function () {
 
 // MySQL 연결 설정
 var connection = mysql.createConnection({
-    host: "db-onlyone.c8uqamkhlhza.ap-northeast-2.rds.amazonaws.com",
-    user: "admin",
-    database: "db-onlyone",
-    password: "admin0101",
-    port: 3306
+    host: "",
+    user: "",
+    database: "",
+    password: "",
+    port: 
 });
 
 // 유저 대기 걸기
@@ -127,8 +127,8 @@ app.post('/kiosk/accept', function(req, res) {
     var resPhNum = req.body.resPhNum;
 
     var sql1 = 'UPDATE Waiting SET WaitisAccepted = 1 WHERE UserPhone = ? ADN resPhNum = ?; ';
-    var sql2 = 'INSERT IGNORE INTO Waited(UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) SELECT UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted FROM Waiting WHERE WaitisAccepted = 1;';
     var params = [UserPhone, resPhNum];
+    var sql2 = 'INSERT IGNORE INTO Waited(UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) SELECT UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted FROM Waiting WHERE WaitisAccepted = 1;';
 
     connection.query(sql1 + sql2, params, function (err, result) {
         var resultCode = 404;

@@ -12,6 +12,7 @@ app.listen(3000, function () {
 });
 
 // MySQL 연결 설정
+/* 
 var connection = mysql.createConnection({
     host: "",
     user: "",
@@ -19,6 +20,7 @@ var connection = mysql.createConnection({
     password: "",
     port: 
 });
+*/
 
 // 유저 대기 걸기
 app.post('/user/waiting/insert', function(req, res) {
@@ -29,41 +31,84 @@ app.post('/user/waiting/insert', function(req, res) {
     var WaitSeat = req.body.WaitSeat;
     var WaitisAccepted = false;
 
-    // 대기 신청 sql문
-    var sql = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?)';
-    var params = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
+    var sql1 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
+    var params1 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
+    sql1 = mysql.format(sql1, params1);
 
-    // sql 문의 ?는 두번째 매개변수로 넘겨진 params의 값으로 치환된다.
-    connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
-        var message = '에러가 발생했습니다';
-
-        if (err) {
+    connection.query(sql1, function(err, results) {
+        if(err) {
             console.log(err);
+            res.json({
+                'message' : '에러 발생'
+            })
         } else {
-            resultCode = 200;
-            message = '대기 신청이 완료되었습니다.';
-        }
-
-        res.json({
-            'UserPhone': UserPhone,
-            'resPhNum': resPhNum,
-            'Waitheadcount': Waitheadcount,
-            'WaitTime': WaitTime,
-            'WaitSeat': WaitSeat,
-            'WaitisAccepted': WaitisAccepted,
-            'code': resultCode,
-            'message' : message
-        });
+            res.json({
+                'UserPhone': UserPhone,
+                'resPhNum': resPhNum,
+                'Waitheadcount': Waitheadcount,
+                'WaitTime': WaitTime,
+                'WaitSeat': WaitSeat,
+                'WaitisAccepted': WaitisAccepted,
+                'message' : '등록 완료!'
+            });
+        };
     });
 });
+
+// 유저 대기 걸기2 (waitIndex 반환)
+app.post('/user/waiting/insert2', function(req, res) {
+    var UserPhone = req.body.UserPhone;
+    var resPhNum = req.body.resPhNum;
+    var Waitheadcount = req.body.Waitheadcount;
+    var WaitTime = req.body.WaitTime;
+    var WaitSeat = req.body.WaitSeat;
+    var WaitisAccepted = false;
+
+    var sql1 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
+    var sql2 = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitisAccepted = false);';
+    var params1 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
+    var params2 = [UserPhone, resPhNum];
+    sql1 = mysql.format(sql1, params1);
+    sql2 = mysql.format(sql2, params2);
+
+    connection.query(sql1 , function(err1, result1) {
+        if(err1) {
+            console.log(err1);
+            res.json({
+                'message' : '대기 insert 에러 발생'
+            });
+            return;
+        }
+        connection.query(sql2, function(err2, result2) {
+            if(err2) {
+                console.log(err2);
+                res.json({
+                    'message' : '에러 발생'
+                });
+            }
+
+            res.json({
+                'WaitIndex' : result2.WaitIndex,
+                'UserPhone': UserPhone,
+                'resPhNum': resPhNum,
+                'Waitheadcount': Waitheadcount,
+                'WaitTime': WaitTime,
+                'WaitSeat': WaitSeat,
+                'WaitisAccepted': WaitisAccepted,
+                'message' : '등록 / 인덱스 확인 완료!'
+            });
+        })
+    })
+});
+
 
 // 대기 내역 삭제
 app.delete('/user/waiting/delete', function(req, res) {
     var UserPhone = req.body.UserPhone;
-    var params = [UserPhone];
+    var resPhNum = req.body.resPhNum;
+    var params = [UserPhone, resPhNum];
 
-    var sql = 'DELETE FROM Waiting WHERE UserPhone = ? and WaitisAccepted = false';
+    var sql = 'DELETE FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitisAccepted = false)';
 
     connection.query(sql, params, function (err, result) {
         var resultCode = 404;
@@ -119,100 +164,40 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
     });
 });
 
-// 입장 수락
-// WaitisAccepted를 true(1)로 바꾸고, 해당 내역을 Waited로 복사하기
-app.post('/kiosk/accept', function(req, res) {
-    console.log(req.body);
-    var UserPhone = req.body.UserPhone;
-    var resPhNum = req.body.resPhNum;
 
-    var sql1 = 'UPDATE Waiting SET WaitisAccepted = 1 WHERE UserPhone = ? ADN resPhNum = ?; ';
-    var params = [UserPhone, resPhNum];
-    var sql2 = 'INSERT IGNORE INTO Waited(UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) SELECT UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted FROM Waiting WHERE WaitisAccepted = 1;';
+// // 입장 거절
+// // 예약 내용 지우기
+// app.post('/kiosk/reject', function(req, res) {
+//     console.log(req.body);
+//     var UserPhone = req.body.UserPhone;
+//     var resPhNum = req.body.resPhNum;
 
-    connection.query(sql1 + sql2, params, function (err, result) {
-        var resultCode = 404;
-        var message = '에러가 발생했습니다';
+//     var sql = 'UPDATE Waiting SET WaitisAccepted = 0 WHERE UserPhone = ? AND resPhNum = ? ';
+//     var params = [UserPhone, resPhNum];
 
-        if (err) {
-            console.log(err);
-        } else if(result == 1) {
-            resultCode = 200;
-            message = '이미 수락되었습니다.';
-        } else {
-            resultCode = 200;
-            message = '입장이 수락되었습니다.';
-        }
+//     connection.query(sql, params, function (err, result) {
+//         var resultCode = 404;
+//         var message = '에러가 발생했습니다';
 
-        res.json({
-            'code': resultCode,
-            'message' : message
-        });
-    });
-});
+//         if (err) {
+//             console.log(err);
+//         } else {
+//             resultCode = 200;
+//             message = '입장이 거절되었습니다.';
+//         }
 
-// 입장 거절
-// 예약 내용 지우기
-app.post('/kiosk/reject', function(req, res) {
-    console.log(req.body);
-    var UserPhone = req.body.UserPhone;
-    var resPhNum = req.body.resPhNum;
+//         res.json({
+//             'code': resultCode,
+//             'message' : message
+//         });
+//     });
+// });
 
-    var sql = 'UPDATE Waiting SET WaitisAccepted = 0 WHERE UserPhone = ? AND resPhNum = ? ';
-    var params = [UserPhone, resPhNum];
-
-    connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
-        var message = '에러가 발생했습니다';
-
-        if (err) {
-            console.log(err);
-        } else {
-            resultCode = 200;
-            message = '입장이 거절되었습니다.';
-        }
-
-        res.json({
-            'code': resultCode,
-            'message' : message
-        });
-    });
-});
-
-// 대기 수락 여부 확인
-// 사장님 사용 - 수락/거부 요청 날릴 수 있도록
-app.post('/user/waiting/acceptreject', function(req, res) {
-    console.log(req.body);
-    var WaitIndex = req.body.WaitIndex;
-
-    var sql = 'SELECT WaitisAccepted FROM Waiting WHERE WaitIndex = ?';
-    var params = [WaitIndex];
-
-    connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
-        var message = '에러가 발생했습니다';
-
-        if (err) {
-            console.log(err);
-        } else {
-            resultCode = 200;
-            if(result == 0) { // WaitisAccepted가 0(false)이면 수락x, 대기중
-                message = '입장 수락 대기중입니다.';
-            } else if(result == 1) {  // WaitisAccepted가 1(ture)이면 수락o
-                message = '입장이 수락되었습니다.';
-            }
-        }
-
-        res.json({
-            'code': resultCode,
-            'message' : message
-        });
-    });
-});
+// 대기자 명단 확인
 
 //대기 미루기
 //스탬프 1개 사용
-app.post('/user/waiting/acceptreject', function(req, res) {
+app.post('/user/waiting/postpone', function(req, res) {
     console.log(req.body);
     var WaitIndex = req.body.WaitIndex;
 

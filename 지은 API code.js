@@ -153,60 +153,53 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
     });
 });
 
-// 과거 대기 내역 확인
+// 과거 대기 내역 (수정 중)
 app.post('/user/waited', function(req, res) {
     var UserPhone = req.body.UserPhone;
 
-    var sql = 'SELECT * FROM Waited WHERE UserPhone = ?';
-    var params = [UserPhone];
+    var sql1 = 'SELECT acceptedTime, resPhNum FROM Waited WHERE UserPhone = ?;'; //대기시간, 레스토랑ID
+    var params1 = [UserPhone];
+    sql1 = mysql.format(sql1, params1);
 
-    connection.query(sql, params, function (err, results) {
-        var message = '에러가 발생했습니다';
-        if (err) {
-            console.log(err);
-        } else {
-            if (results.length == 0) {
-
-            } else {
-                res.json({
-                    results
-                });
-            }
+    connection.query(sql1, function (err1, result1) {
+        if (err1) {
+            console.log(err1);
+            return;
         }
+
+        var sql2 = 'SELECT resName, resImg FROM Restaurants WHERE resPhNum = ?;'; // 레스토랑 이름, 레스토랑 이미지 이름
+        for (var i = 0; i < result.length; i++) {
+            var params2 = [result1[i].resPhNum];
+            sql2 = mysql.format(sql2, params2);
+
+            connection.query(sql2, function(err2, result2) {
+                if (err2) {
+                    console.log(err2);
+                    return;
+                }
+
+                res.json
+            })
+        }
+
+        connection.query(sql2, function(err2, result2) {
+            if (err2) {
+                console.log(err2);
+                return;
+            }
+
+            res.json({
+                'acceptedTime' : acceptedTime,
+                'resPhNum' : resPhNum,
+                'resName' : resName,
+                'resImg' : resImg
+            })
+        })
+        
     });
 });
 
-// // 입장 거절
-// // 예약 내용 지우기
-// app.post('/kiosk/reject', function(req, res) {
-//     console.log(req.body);
-//     var UserPhone = req.body.UserPhone;
-//     var resPhNum = req.body.resPhNum;
-
-//     var sql = 'UPDATE Waiting SET WaitisAccepted = 0 WHERE UserPhone = ? AND resPhNum = ? ';
-//     var params = [UserPhone, resPhNum];
-
-//     connection.query(sql, params, function (err, result) {
-//         var resultCode = 404;
-//         var message = '에러가 발생했습니다';
-
-//         if (err) {
-//             console.log(err);
-//         } else {
-//             resultCode = 200;
-//             message = '입장이 거절되었습니다.';
-//         }
-
-//         res.json({
-//             'code': resultCode,
-//             'message' : message
-//         });
-//     });
-// });
-
-
-//대기 미루기
-//스탬프 1개 사용
+//대기 미루기 (수정 중)
 app.post('/user/waiting/postpone', function(req, res) {
     console.log(req.body);
     var WaitIndex = req.body.WaitIndex;

@@ -23,6 +23,8 @@ var connection = mysql.createConnection({
 */
 
 // 유저 대기 걸기
+// 레스토랑 currentwaiting +1
+// useriswaiting +1 --> 만약 이미 1이라면 못걸게한다
 app.post('/user/waiting/insert', function(req, res) {
     var UserPhone = req.body.UserPhone;
     var resPhNum = req.body.resPhNum;
@@ -101,29 +103,24 @@ app.post('/user/waiting/insert2', function(req, res) {
     })
 });
 
-
 // 대기 내역 삭제
 app.delete('/user/waiting/delete', function(req, res) {
-    var UserPhone = req.body.UserPhone;
-    var resPhNum = req.body.resPhNum;
-    var params = [UserPhone, resPhNum];
+    var WaitIndex = req.body.WaitIndex;
+    var params = [WaitIndex];
 
-    var sql = 'DELETE FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitisAccepted = false)';
+    var sql = 'DELETE FROM Waiting WHERE WaitIndex = ?';
 
     connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
         var message = '에러가 발생했습니다';
 
         if (err) {
             console.log(err);
         } else {
-            resultCode = 200;
             message = '대기 신청이 취소되었습니다.';
         }
 
         res.json({
-            'code': resultCode,
-            'UserPhone' : UserPhone,
+            'WaitIndex' : WaitIndex,
             'message' : message
         });
     });
@@ -134,30 +131,22 @@ app.delete('/user/waiting/delete', function(req, res) {
 // result.length를 구해서 앞에 몇 명이 있는 지 파악
 app.post('/user/waiting/waitingnumber', function(req, res) {
     console.log(req.body);
-    var UserPhone = req.body.UserPhone;
+    var WaitIndex = req.body.WaitIndex;
     var resPhNum = req.body.resPhNum;
 
-    var sql = 'SELECT * FROM (SELECT * FROM Waiting WHERE (resPhNum = ? AND WaitisAccepted = FALSE) ORDER BY WaitTime) Waiting WHERE WaitTime < (SELECT WaitTime FROM Waiting WHERE UserPhone = ? )';
-    var params = [resPhNum, UserPhone];
+    var sql = 'SELECT * FROM Waiting WHERE (waitIndex < ? AND resPhNum = ? AND WaitIsAccepted = 0)';
+    //var sql = 'SELECT * FROM (SELECT * FROM Waiting WHERE (resPhNum = ? AND WaitisAccepted = FALSE) ORDER BY WaitTime) Waiting WHERE WaitTime < (SELECT WaitTime FROM Waiting WHERE UserPhone = ? )';
+    var params = [WaitIndex, resPhNum];
 
     connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
         var message = '에러가 발생했습니다';
-
         if (err) {
             console.log(err);
         } else {
-            resultCode = 200;
-            message = '현재 ' + result.length + '팀이 앞에 있습니다.';;
-            if(result.length == 0) { // WaitisAccepted가 0(false)이면 수락x, 대기중
-                message = '현재 ' + result.length + '팀이 앞에 있습니다.';;
-            } else if(result == 1) {  // WaitisAccepted가 1(ture)이면 수락o
-                message = '입장이 수락되었습니다.';
-            }
+            message = '현재 ' + result.length + '팀이 앞에 있습니다.'; 
         }
 
         res.json({
-            'code': resultCode,
             'message' : message,
             'result' : result.length
         });
@@ -193,7 +182,6 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
 //     });
 // });
 
-// 대기자 명단 확인
 
 //대기 미루기
 //스탬프 1개 사용

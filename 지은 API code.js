@@ -153,6 +153,28 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
     });
 });
 
+// 과거 대기 내역 확인
+app.post('/user/waited', function(req, res) {
+    var UserPhone = req.body.UserPhone;
+
+    var sql = 'SELECT * FROM Waited WHERE UserPhone = ?';
+    var params = [UserPhone];
+
+    connection.query(sql, params, function (err, results) {
+        var message = '에러가 발생했습니다';
+        if (err) {
+            console.log(err);
+        } else {
+            if (results.length == 0) {
+
+            } else {
+                res.json({
+                    results
+                });
+            }
+        }
+    });
+});
 
 // // 입장 거절
 // // 예약 내용 지우기

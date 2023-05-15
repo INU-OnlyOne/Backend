@@ -67,9 +67,9 @@ app.post('/user/waiting/insert2', function(req, res) {
     var WaitisAccepted = false;
 
     var sql1 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
-    var sql2 = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitisAccepted = false);';
+    var sql2 = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitTime = ?);';
     var params1 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
-    var params2 = [UserPhone, resPhNum];
+    var params2 = [UserPhone, resPhNum, WaitTime];
     sql1 = mysql.format(sql1, params1);
     sql2 = mysql.format(sql2, params2);
 
@@ -81,16 +81,17 @@ app.post('/user/waiting/insert2', function(req, res) {
             });
             return;
         }
-        connection.query(sql2, function(err2, result2) {
+        connection.query(sql2, function (err2, result2) {
             if(err2) {
                 console.log(err2);
                 res.json({
                     'message' : '에러 발생'
                 });
+                return;
             }
 
             res.json({
-                'WaitIndex' : result2.WaitIndex,
+                'WaitIndex' : result2,
                 'UserPhone': UserPhone,
                 'resPhNum': resPhNum,
                 'Waitheadcount': Waitheadcount,
@@ -154,11 +155,12 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
 });
 
 // 과거 대기 내역 (수정 중)
+// 아이디, 레스토랑 이름, 레스토랑 사진, 대기일자
 app.post('/user/waited', function(req, res) {
     var UserPhone = req.body.UserPhone;
-
-    var sql1 = 'SELECT acceptedTime, resPhNum FROM Waited WHERE UserPhone = ?;'; //대기시간, 레스토랑ID
-    var params1 = [UserPhone];
+    
+    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;'; //Waited와 Restaurants 테이블 조인
+    var params1 =[UserPhone];
     sql1 = mysql.format(sql1, params1);
 
     connection.query(sql1, function (err1, result1) {
@@ -167,35 +169,9 @@ app.post('/user/waited', function(req, res) {
             return;
         }
 
-        var sql2 = 'SELECT resName, resImg FROM Restaurants WHERE resPhNum = ?;'; // 레스토랑 이름, 레스토랑 이미지 이름
-        for (var i = 0; i < result.length; i++) {
-            var params2 = [result1[i].resPhNum];
-            sql2 = mysql.format(sql2, params2);
-
-            connection.query(sql2, function(err2, result2) {
-                if (err2) {
-                    console.log(err2);
-                    return;
-                }
-
-                res.json
-            })
-        }
-
-        connection.query(sql2, function(err2, result2) {
-            if (err2) {
-                console.log(err2);
-                return;
-            }
-
-            res.json({
-                'acceptedTime' : acceptedTime,
-                'resPhNum' : resPhNum,
-                'resName' : resName,
-                'resImg' : resImg
-            })
-        })
-        
+        res.json({
+            result1
+        }) 
     });
 });
 

@@ -23,8 +23,6 @@ var connection = mysql.createConnection({
 */
 
 // 유저 대기 걸기
-// 레스토랑 currentwaiting +1
-// useriswaiting +1 --> 만약 이미 1이라면 못걸게한다
 app.post('/user/waiting/insert', function(req, res) {
     var UserPhone = req.body.UserPhone;
     var resPhNum = req.body.resPhNum;
@@ -54,6 +52,26 @@ app.post('/user/waiting/insert', function(req, res) {
                 'message' : '등록 완료!'
             });
         };
+    });
+});
+
+// 사용자 WaitIndex 반환
+app.post('/user/waitindex', function(req, res) {
+    var UserPhone = req.body.UserPhone;
+    var WaitTime = req.body.WaitTime;
+
+    var sql = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND WaitTime = ?)';
+    var params = [UserPhone, WaitTime];
+
+    connection.query(sql, params, function (err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        } 
+
+        res.json({
+            'WaitIndex' : result
+        });
     });
 });
 
@@ -154,12 +172,12 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
     });
 });
 
-// 과거 대기 내역 (수정 중)
+// 과거 대기 내역
 // 아이디, 레스토랑 이름, 레스토랑 사진, 대기일자
 app.post('/user/waited', function(req, res) {
     var UserPhone = req.body.UserPhone;
     
-    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;'; //Waited와 Restaurants 테이블 조인
+    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;';
     var params1 =[UserPhone];
     sql1 = mysql.format(sql1, params1);
 
@@ -172,6 +190,25 @@ app.post('/user/waited', function(req, res) {
         res.json({
             result1
         }) 
+    });
+});
+
+//대기자 명단 확인
+app.post('/kiosk/waitinginfo', function(req, res) {
+    var resPhNum = req.body.resPhNum;
+
+    var sql = 'SELECT WaitIndex, Users.UserPhone, WaitHeadcount, keyword, WaitisAccepted FROM Users, Waiting WHERE (Waiting.UserPhone = Users.UserPhone AND resPhNum = ? AND WaitisAccepted = false)';
+    var params = [resPhNum];
+
+    connection.query(sql, params, function (err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        } 
+
+        res.json({
+            result
+        });
     });
 });
 

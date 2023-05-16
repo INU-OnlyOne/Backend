@@ -70,57 +70,57 @@ app.post('/user/waitindex', function(req, res) {
         } 
 
         res.json({
-            'WaitIndex' : result
+            result
         });
     });
 });
 
-// 유저 대기 걸기2 (waitIndex 반환)
-app.post('/user/waiting/insert2', function(req, res) {
-    var UserPhone = req.body.UserPhone;
-    var resPhNum = req.body.resPhNum;
-    var Waitheadcount = req.body.Waitheadcount;
-    var WaitTime = req.body.WaitTime;
-    var WaitSeat = req.body.WaitSeat;
-    var WaitisAccepted = false;
+// // 유저 대기 걸기2 (waitIndex 반환)
+// app.post('/user/waiting/insert2', function(req, res) {
+//     var UserPhone = req.body.UserPhone;
+//     var resPhNum = req.body.resPhNum;
+//     var Waitheadcount = req.body.Waitheadcount;
+//     var WaitTime = req.body.WaitTime;
+//     var WaitSeat = req.body.WaitSeat;
+//     var WaitisAccepted = false;
 
-    var sql1 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
-    var sql2 = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitTime = ?);';
-    var params1 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
-    var params2 = [UserPhone, resPhNum, WaitTime];
-    sql1 = mysql.format(sql1, params1);
-    sql2 = mysql.format(sql2, params2);
+//     var sql1 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
+//     var sql2 = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND resPhNum = ? AND WaitTime = ?);';
+//     var params1 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
+//     var params2 = [UserPhone, resPhNum, WaitTime];
+//     sql1 = mysql.format(sql1, params1);
+//     sql2 = mysql.format(sql2, params2);
 
-    connection.query(sql1 , function(err1, result1) {
-        if(err1) {
-            console.log(err1);
-            res.json({
-                'message' : '대기 insert 에러 발생'
-            });
-            return;
-        }
-        connection.query(sql2, function (err2, result2) {
-            if(err2) {
-                console.log(err2);
-                res.json({
-                    'message' : '에러 발생'
-                });
-                return;
-            }
+//     connection.query(sql1 , function(err1, result1) {
+//         if(err1) {
+//             console.log(err1);
+//             res.json({
+//                 'message' : '대기 insert 에러 발생'
+//             });
+//             return;
+//         }
+//         connection.query(sql2, function (err2, result2) {
+//             if(err2) {
+//                 console.log(err2);
+//                 res.json({
+//                     'message' : '에러 발생'
+//                 });
+//                 return;
+//             }
 
-            res.json({
-                'WaitIndex' : result2,
-                'UserPhone': UserPhone,
-                'resPhNum': resPhNum,
-                'Waitheadcount': Waitheadcount,
-                'WaitTime': WaitTime,
-                'WaitSeat': WaitSeat,
-                'WaitisAccepted': WaitisAccepted,
-                'message' : '등록 / 인덱스 확인 완료!'
-            });
-        })
-    })
-});
+//             res.json({
+//                 'WaitIndex' : result2,
+//                 'UserPhone': UserPhone,
+//                 'resPhNum': resPhNum,
+//                 'Waitheadcount': Waitheadcount,
+//                 'WaitTime': WaitTime,
+//                 'WaitSeat': WaitSeat,
+//                 'WaitisAccepted': WaitisAccepted,
+//                 'message' : '등록 / 인덱스 확인 완료!'
+//             });
+//         })
+//     })
+// });
 
 // 대기 내역 삭제
 app.delete('/user/waiting/delete', function(req, res) {
@@ -216,28 +216,101 @@ app.post('/kiosk/waitinginfo', function(req, res) {
 app.post('/user/waiting/postpone', function(req, res) {
     console.log(req.body);
     var WaitIndex = req.body.WaitIndex;
+    var resPhNum = req.body.resPhNum;
 
-    var sql = 'SELECT WaitisAccepted FROM Waiting WHERE WaitIndex = ?';
-    var params = [WaitIndex];
+    var sql1 = 'SET @tmp = ?; SET @front = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex <= @tmp) ORDER BY WaitIndex DESC LIMIT 1,1);';
+    var sql2 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = ?;';
+    var sql3 = 'UPDATE Waiting SET WaitIndex = ? WHERE WaitIndex = @front;';
+    var sql4 = 'UPDATE Waiting SET WaitIndex = @front WHERE WaitIndex = -1;';
+    var params1 = [WaitIndex ,resPhNum];
+    var params2 = [WaitIndex];
+    var params3 = [WaitIndex];
 
-    connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
-        var message = '에러가 발생했습니다';
+    sql1 = mysql.format(sql1, params1);
+    sql2 = mysql.format(sql2, params2);
+    sql3 = mysql.format(sql3, params3);
 
+    connection.query(sql1, function (err1, result1) {
+        if (err1) {
+            console.log(err1);
+            return;
+        }
+        connection.query(sql2, function (err2, result2) {
+            if(err2) {
+                console.log(err2);
+                return;
+            }
+
+            connection.query(sql3, function (err3, result3) {
+                if(err3) {
+                    console.log(err3)
+                    return;
+                }
+
+                connection.query(sql4, function (err4, result4) {
+                    if(err4) {
+                        console.log(err4);
+                        return;
+                    }
+                    res.json({
+                        'message' : '대기 미루기 완료'
+                    });
+                });
+            });
+        });
+    });
+});
+
+//대기 미루기 (수정 중)
+app.post('/user/waiting/postpone', function(req, res) {
+    console.log(req.body);
+    var WaitIndex = req.body.WaitIndex;
+    var resPhNum = req.body.resPhNum;
+
+    var sql1 = 'SET @tmp = ?; SET @front = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex <= @tmp) ORDER BY WaitIndex DESC LIMIT 1,1);';
+    var sql2 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = @tmp;';
+    var params1 = [WaitIndex ,resPhNum];
+
+    sql1 = mysql.format(sql1, params1);
+
+    connection.query(sql1, function (err1, result1) {
         if (err) {
             console.log(err);
-        } else {
-            resultCode = 200;
-            if(result == 0) { // WaitisAccepted가 0(false)이면 수락x, 대기중
-                message = '입장 수락 대기중입니다.';
-            } else if(result == 1) {  // WaitisAccepted가 1(ture)이면 수락o
-                message = '입장이 수락되었습니다.';
-            }
+            res.json({
+                'message' : '에러 발생1'
+            });
+            return;
         }
+        connection.query(sql2, function (err2, result2) {
+            if(err2) {
+                console.log(err2);
+                res.json({
+                    'message' : '에러 발생2'
+                });
+                return;
+            }
 
-        res.json({
-            'code': resultCode,
-            'message' : message
+            var sql3 = 'UPDATE Waiting SET WaitIndex = @tmp WHERE WaitIndex = @front;';
+            connection.query(sql3, function (err3, result3) {
+                if(err3) {
+                    console.log(err3)
+                    res.json({
+                        'message' : '에러 발생3'
+                    });
+                    return;
+                }
+            });
+
+            var sql4 = 'UPDATE Waiting SET WaitIndex = @front WHERE WaitIndex = -1;';
+            connection.query(sql4, function (err4, result4) {
+                if(err4) {
+                    console.log(err4);
+                    res.json({
+                        'message' : '에러 발생4'
+                    });
+                    return;
+                }
+            });
         });
     });
 });

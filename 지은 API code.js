@@ -75,6 +75,61 @@ app.post('/user/waitindex', function(req, res) {
     });
 });
 
+// 유저 대기 걸기
+// restaurants의 대기 시간에 따름
+app.post('/user/waiting/insert_time', function(req, res) {
+    var UserPhone = req.body.UserPhone;
+    var resPhNum = req.body.resPhNum;
+    var Waitheadcount = req.body.Waitheadcount;
+    var WaitTime = req.body.WaitTime;
+    var WaitSeat = req.body.WaitSeat;
+    var WaitisAccepted = false;
+
+    var sql1 = 'SELECT resWaitOpen, resWaitClose FROM Restaurants WHERE resPhNum = ?;';
+    var sql2 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
+    var params1 = [resPhNum];
+    var params2 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
+    sql1 = mysql.format(sql1, params1);
+    sql2 = mysql.format(sql2, params2);
+
+    // 대기 가능 시간인 지 확인
+    connection.query(sql1, function(err1, result1) {
+        if(err1) {
+            console.log(err1);
+            res.json({
+                'message' : '에러 발생1'
+            });
+        }
+        var WTime = new Date(WaitTime).toTimeString().split(' ')[0];
+        if (WTime < result1[0].resWaitOpen || WTime > result1[0].resWaitClose) {
+            res.json({
+                'message' : '대기 가능 시간 아님'
+            });
+            return;
+        } else {
+            // 대기 가능하다면, INSERT 쿼리 실행
+            connection.query(sql2, function(err2, result2) {
+                if(err2) {
+                    console.log(err2);
+                    res.json({
+                        'message' : '에러 발생2'
+                    });
+                } else {
+                    res.json({
+                        'UserPhone': UserPhone,
+                        'resPhNum': resPhNum,
+                        'Waitheadcount': Waitheadcount,
+                        'WaitTime': WaitTime,
+                        'WaitSeat': WaitSeat,
+                        'WaitisAccepted': WaitisAccepted,
+                        'message' : '등록 완료!'
+                    });
+                }
+            });
+        }
+    });
+});
+
 // // 유저 대기 걸기2 (waitIndex 반환)
 // app.post('/user/waiting/insert2', function(req, res) {
 //     var UserPhone = req.body.UserPhone;
@@ -212,7 +267,7 @@ app.post('/kiosk/waitinginfo', function(req, res) {
     });
 });
 
-//대기 미루기 (수정 중)
+//대기 미루기
 app.post('/user/waiting/postpone', function(req, res) {
     console.log(req.body);
     var WaitIndex = req.body.WaitIndex;
@@ -256,60 +311,6 @@ app.post('/user/waiting/postpone', function(req, res) {
                         'message' : '대기 미루기 완료'
                     });
                 });
-            });
-        });
-    });
-});
-
-//대기 미루기 (수정 중)
-app.post('/user/waiting/postpone', function(req, res) {
-    console.log(req.body);
-    var WaitIndex = req.body.WaitIndex;
-    var resPhNum = req.body.resPhNum;
-
-    var sql1 = 'SET @tmp = ?; SET @front = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex <= @tmp) ORDER BY WaitIndex DESC LIMIT 1,1);';
-    var sql2 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = @tmp;';
-    var params1 = [WaitIndex ,resPhNum];
-
-    sql1 = mysql.format(sql1, params1);
-
-    connection.query(sql1, function (err1, result1) {
-        if (err) {
-            console.log(err);
-            res.json({
-                'message' : '에러 발생1'
-            });
-            return;
-        }
-        connection.query(sql2, function (err2, result2) {
-            if(err2) {
-                console.log(err2);
-                res.json({
-                    'message' : '에러 발생2'
-                });
-                return;
-            }
-
-            var sql3 = 'UPDATE Waiting SET WaitIndex = @tmp WHERE WaitIndex = @front;';
-            connection.query(sql3, function (err3, result3) {
-                if(err3) {
-                    console.log(err3)
-                    res.json({
-                        'message' : '에러 발생3'
-                    });
-                    return;
-                }
-            });
-
-            var sql4 = 'UPDATE Waiting SET WaitIndex = @front WHERE WaitIndex = -1;';
-            connection.query(sql4, function (err4, result4) {
-                if(err4) {
-                    console.log(err4);
-                    res.json({
-                        'message' : '에러 발생4'
-                    });
-                    return;
-                }
             });
         });
     });

@@ -248,25 +248,6 @@ app.post('/user/waited', function(req, res) {
     });
 });
 
-//대기자 명단 확인
-app.post('/kiosk/waitinginfo', function(req, res) {
-    var resPhNum = req.body.resPhNum;
-
-    var sql = 'SELECT WaitIndex, UserPhone, WaitHeadcount, WaitSeat, WaitisAccepted FROM (SELECT * FROM Waiting NATURAL JOIN Restaurants) Waiting WHERE resPhNum = ?;';
-    var params = [resPhNum];
-
-    connection.query(sql, params, function (err, result) {
-        if (err) {
-            console.log(err);
-            return;
-        } 
-
-        res.json({
-            result
-        });
-    });
-});
-
 //대기 미루기
 app.post('/user/waiting/postpone', function(req, res) {
     console.log(req.body);
@@ -312,6 +293,44 @@ app.post('/user/waiting/postpone', function(req, res) {
                     });
                 });
             });
+        });
+    });
+});
+
+//대기자 명단 확인
+app.post('/kiosk/waitinginfo', function(req, res) {
+    var resPhNum = req.body.resPhNum;
+
+    var sql = 'SELECT WaitIndex, UserPhone, WaitHeadcount, WaitSeat, WaitisAccepted FROM (SELECT * FROM Waiting NATURAL JOIN Restaurants) Waiting WHERE resPhNum = ?;';
+    var params = [resPhNum];
+
+    connection.query(sql, params, function (err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        } 
+
+        res.json({
+            result
+        });
+    });
+});
+
+//과거 대기 손님 리스트
+app.post('/kiosk/waited', function(req, res) {
+    var resPhNum = req.body.resPhNum;
+
+    var sql = 'SELECT * From Waited WHERE resPhNuM = ? AND WaitisAccepted = 2;';
+    var params = [resPhNum];
+
+    connection.query(sql, params, function (err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        } 
+
+        res.json({
+            result
         });
     });
 });

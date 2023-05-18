@@ -232,7 +232,7 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
 app.post('/user/waited', function(req, res) {
     var UserPhone = req.body.UserPhone;
     
-    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;';
+    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg, resIdx From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;';
     var params1 =[UserPhone];
     sql1 = mysql.format(sql1, params1);
 
@@ -252,7 +252,7 @@ app.post('/user/waited', function(req, res) {
 app.post('/kiosk/waitinginfo', function(req, res) {
     var resPhNum = req.body.resPhNum;
 
-    var sql = 'SELECT WaitIndex, Users.UserPhone, WaitHeadcount, keyword, WaitisAccepted FROM Users, Waiting WHERE (Waiting.UserPhone = Users.UserPhone AND resPhNum = ? AND WaitisAccepted = false)';
+    var sql = 'SELECT WaitIndex, UserPhone, WaitHeadcount, WaitSeat, WaitisAccepted FROM (SELECT * FROM Waiting NATURAL JOIN Restaurants) Waiting WHERE resPhNum = ?;';
     var params = [resPhNum];
 
     connection.query(sql, params, function (err, result) {

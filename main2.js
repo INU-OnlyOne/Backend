@@ -12,11 +12,11 @@ app.listen(3000, function () {
 
 // 디비 연결
 var connection = mysql.createConnection({
-    host: "db-onlyone.c8uqamkhlhza.ap-northeast-2.rds.amazonaws.com",
-    user: "admin",
-    database: "onlyone",
-    password: "admin0101",
-    port: 3306,
+    host: "",
+    user: "",
+    database: "",
+    password: "",
+    port: ,
     multipleStatements: true
 });
 

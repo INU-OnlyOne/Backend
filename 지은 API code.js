@@ -180,26 +180,32 @@ app.post('/kiosk/waitinginfo', function(req, res) {
 // 대기 내역 삭제
 app.post('/user/waiting/delete', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
-    var params = [WaitIndex];
 
-    var sql = 'DELETE FROM Waiting WHERE WaitIndex = ?';
+    var sql1 = 'DELETE FROM Waiting WHERE WaitIndex = ?;';
+    var sql2 = 'UPDATE Users SET userIsWaiting = 0 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = ?);';
+    var params1 = [WaitIndex];
+    var params2 = [WaitIndex];
 
-    connection.query(sql, params, function (err, result) {
-        var resultCode = 404;
-        var message = '에러가 발생했습니다';
+    sql1 = mysql.format(sql1, params1);
+    sql2 = mysql.format(sql2, params2);
 
-        if (err) {
-            console.log(err);
-        } else {
-            resultCode = 200;
-            message = '대기 신청이 취소되었습니다.';
+    connection.query(sql1, function (err1, result1) {
+        if (err1) {
+            console.log(err1);
+            return;
         }
-
+        message = '대기 신청이 취소되었습니다.';
         res.json({
-            'code': resultCode,
             'WaitIndex' : WaitIndex,
             'message' : message
         });
+    });
+
+    connection.query(sql2, function (err2, result2) {
+        if(err2) {
+            console.log(err2);
+            return;
+        }
     });
 });
 
@@ -260,9 +266,9 @@ app.post('/user/waiting/postpone', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
     var resPhNum = req.body.resPhNum;
 
-    var sql1 = 'SET @tmp = ?; SET @back = (SELECT WaitIndex FROM Waiting WHERE (                                                                                                                                                             resPhNum = ? AND WaitIndex > @tmp) ORDER BY WaitIndex LIMIT 1);'; // 변수 설정
-    var sql2 = 'UPDATE Users SET Stamp = Stamp - 1 WHERE Users.UserPhone = (SELE                                                                                                                                                             CT UserPhone From Waiting WHERE WaitIndex = @tmp);'; // stamp 개수 update
-    var sql3 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = @tmp;'; //                                                                                                                                                              대기 미루기
+    var sql1 = 'SET @tmp = ?; SET @back = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex > @tmp) ORDER BY WaitIndex LIMIT 1);'; // 변수 설정
+    var sql2 = 'UPDATE Users SET Stamp = Stamp - 1 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = @tmp);'; // stamp 개수 update
+    var sql3 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = @tmp;'; // 대기 미루기
     var sql4 = 'UPDATE Waiting SET WaitIndex = @tmp WHERE WaitIndex = @back;';
     var sql5 = 'UPDATE Waiting SET WaitIndex = @back WHERE WaitIndex = -1;';
     var params1 = [WaitIndex, resPhNum];

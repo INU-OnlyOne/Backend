@@ -252,7 +252,7 @@ app.post('/user/waited', function(req, res) {
 app.post('/kiosk/waitinginfo', function(req, res) {
     var resPhNum = req.body.resPhNum;
 
-    var sql = 'SELECT WaitIndex, Users.UserPhone, WaitHeadcount, keyword, WaitisAccepted FROM Users, Waiting WHERE (Waiting.UserPhone = Users.UserPhone AND resPhNum = ? AND WaitisAccepted = false)';
+    var sql = 'SELECT WaitIndex, Users.UserPhone, WaitHeadcount, keyWord, WaitisAccepted FROM Users, Waiting WHERE (Waiting.UserPhone = Users.UserPhone AND resPhNum = ? AND WaitisAccepted = 0)';
     var params = [resPhNum];
 
     connection.query(sql, params, function (err, result) {
@@ -267,48 +267,79 @@ app.post('/kiosk/waitinginfo', function(req, res) {
     });
 });
 
-//대기 미루기
+// 사용자 stamp 개수 확인
+app.post('/user/stamp', function(req, res) {
+    var WaitIndex = req.body.WaitIndex;
+
+    var sql = 'SELECT Stamp From Users WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = ?);'; // stamp 개수 가져오기
+    var params = [WaitIndex];
+    sql = mysql.format(sql, params);
+
+    connection.query(sql, function(err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+
+        if(result[0].Stamp <= 0) {
+            res.json({
+                'stamp' : result[0].Stamp,
+                'message' : '스탬프가 부족합니다.'
+            });
+        } else {
+            res.json({
+                'stamp' : result[0].Stamp,
+                'message' : '스탬프 개수는 ' + result[0].Stamp + '개 입니다.'
+            });
+        }
+    });
+});
+
+// 대기 미루기
 app.post('/user/waiting/postpone', function(req, res) {
-    console.log(req.body);
     var WaitIndex = req.body.WaitIndex;
     var resPhNum = req.body.resPhNum;
 
-    var sql1 = 'SET @tmp = ?; SET @front = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex <= @tmp) ORDER BY WaitIndex DESC LIMIT 1,1);';
-    var sql2 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = ?;';
-    var sql3 = 'UPDATE Waiting SET WaitIndex = ? WHERE WaitIndex = @front;';
-    var sql4 = 'UPDATE Waiting SET WaitIndex = @front WHERE WaitIndex = -1;';
-    var params1 = [WaitIndex ,resPhNum];
-    var params2 = [WaitIndex];
-    var params3 = [WaitIndex];
+    var sql1 = 'SET @tmp = ?; SET @back = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex > @tmp) ORDER BY WaitIndex LIMIT 1);'; // 변수 설정
+    var sql2 = 'UPDATE Users SET Stamp = Stamp - 1 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = @tmp);'; // stamp 개수 update
+    var sql3 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = @tmp;'; // 대기 미루기
+    var sql4 = 'UPDATE Waiting SET WaitIndex = @tmp WHERE WaitIndex = @back;';
+    var sql5 = 'UPDATE Waiting SET WaitIndex = @back WHERE WaitIndex = -1;';
+    var params1 = [WaitIndex, resPhNum];
 
     sql1 = mysql.format(sql1, params1);
-    sql2 = mysql.format(sql2, params2);
-    sql3 = mysql.format(sql3, params3);
 
+    // 변수 설정
     connection.query(sql1, function (err1, result1) {
         if (err1) {
             console.log(err1);
             return;
         }
+        // stamp 개수 update
         connection.query(sql2, function (err2, result2) {
             if(err2) {
                 console.log(err2);
                 return;
             }
-
+            // 대기 미루기 실행
             connection.query(sql3, function (err3, result3) {
                 if(err3) {
                     console.log(err3)
                     return;
                 }
-
                 connection.query(sql4, function (err4, result4) {
                     if(err4) {
                         console.log(err4);
                         return;
                     }
-                    res.json({
-                        'message' : '대기 미루기 완료'
+                    connection.query(sql5, function (err5, result5) {
+                        if(err5) {
+                            console.log(err5);
+                            return;
+                        }
+                        res.json({
+                            'message' : '대기 미루기 완료'
+                        });
                     });
                 });
             });

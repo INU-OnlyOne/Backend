@@ -120,24 +120,24 @@ app.post('/user/waitindex', function(req, res) {
     });
 });
 
-// // 과거 대기 내역
-// // 아이디, 레스토랑 이름, 레스토랑 사진, 대기일자
-// app.post('/user/waited', function(req, res) {
-//     var UserPhone = req.body.UserPhone;
+// 과거 대기 내역
+// 아이디, 레스토랑 이름, 레스토랑 사진, 대기일자
+app.post('/user/waited', function(req, res) {
+    var UserPhone = req.body.UserPhone;
     
-//     var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg, resIdx From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;';
-//     var params1 =[UserPhone];
-//     sql1 = mysql.format(sql1, params1);
-//     connection.query(sql1, function (err1, result1) {
-//         if (err1) {
-//             console.log(err1);
-//             return;
-//         }
-//         res.json({
-//             result1
-//         }) 
-//     });
-// });
+    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg, resIdx, WaitisAccepted From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ? AND WaitisAccepted >= 2;';
+    var params1 =[UserPhone];
+    sql1 = mysql.format(sql1, params1);
+    connection.query(sql1, function (err1, result1) {
+        if (err1) {
+            console.log(err1);
+            return;
+        }
+        res.json({
+            result1
+        }) 
+    });
+});
 
 //과거 대기 손님 리스트
 app.post('/kiosk/waited', function(req, res) {

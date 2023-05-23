@@ -231,7 +231,7 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
 app.post('/user/stamp', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
 
-    var sql = 'SELECT Stamp From Users WHERE Users.UserPhone = (SELECT UserPhone                                                                                                                                                              From Waiting WHERE WaitIndex = ?);'; // stamp 개수 가져오기
+    var sql = 'SELECT Stamp From Users WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = ?);'; // stamp 개수 가져오기
     var params = [WaitIndex];
     sql = mysql.format(sql, params);
 

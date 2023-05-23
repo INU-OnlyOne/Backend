@@ -24,46 +24,9 @@ var connection = mysql.createConnection({
 
 // 유저 대기 걸기
 app.post('/user/waiting/insert', function(req, res) {
-    var UserPhone = req.body.UserPhone;
-    var resPhNum = req.body.resPhNum;
-    var Waitheadcount = req.body.Waitheadcount;
-    var WaitTime = req.body.WaitTime;
-    var WaitSeat = req.body.WaitSeat;
-    var WaitisAccepted = false;
-
-    var sql1 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
-    var params1 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
-    sql1 = mysql.format(sql1, params1);
-
-    connection.query(sql1, function(err, results) {
-        if(err) {
-            console.log(err);
-            res.json({
-                'message' : '에러 발생'
-            })
-        } else {
-            res.json({
-                'UserPhone': UserPhone,
-                'resPhNum': resPhNum,
-                'Waitheadcount': Waitheadcount,
-                'WaitTime': WaitTime,
-                'WaitSeat': WaitSeat,
-                'WaitisAccepted': WaitisAccepted,
-                'message' : '등록 완료!'
-            });
-        };
-    });
-});
-
-// 사용자 WaitIndex 반환
-app.post('/user/waitindex', function(req, res) {
-    var UserPhone = req.body.UserPhone;
-    var WaitTime = req.body.WaitTime;
-
-    var sql = 'SELECT WaitIndex FROM Waiting WHERE (UserPhone = ? AND WaitTime = ?)';
-    var params = [UserPhone, WaitTime];
-
-    connection.query(sql, params, function (err, result) {
+Expand Down
+Expand Up
+	@@ -67,116 +397,14 @@ app.post('/user/waitindex', function(req, res) {
         if (err) {
             console.log(err);
             return;
@@ -180,23 +143,8 @@ app.post('/user/waiting/insert_time', function(req, res) {
 // 대기 내역 삭제
 app.delete('/user/waiting/delete', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
-    var params = [WaitIndex];
-
-    var sql = 'DELETE FROM Waiting WHERE WaitIndex = ?';
-
-    connection.query(sql, params, function (err, result) {
-        var message = '에러가 발생했습니다';
-
-        if (err) {
-            console.log(err);
-        } else {
-            message = '대기 신청이 취소되었습니다.';
-        }
-
-        res.json({
-            'WaitIndex' : WaitIndex,
-            'message' : message
-        });
+Expand All
+	@@ -200,38 +428,11 @@ app.delete('/user/waiting/delete', function(req, res) {
     });
 });
 
@@ -232,15 +180,11 @@ app.post('/user/waiting/waitingnumber', function(req, res) {
 app.post('/user/waited', function(req, res) {
     var UserPhone = req.body.UserPhone;
     
-    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;';
+    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg, resIdx From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ?;';
     var params1 =[UserPhone];
     sql1 = mysql.format(sql1, params1);
-
-    connection.query(sql1, function (err1, result1) {
-        if (err1) {
-            console.log(err1);
-            return;
-        }
+Expand All
+	@@ -244,93 +445,989 @@ app.post('/user/waited', function(req, res) {
 
         res.json({
             result1
@@ -248,6 +192,7 @@ app.post('/user/waited', function(req, res) {
     });
 });
 
+<<<<<<< HEAD
 //대기자 명단 확인
 app.post('/kiosk/waitinginfo', function(req, res) {
     var resPhNum = req.body.resPhNum;
@@ -296,6 +241,9 @@ app.post('/user/stamp', function(req, res) {
 });
 
 // 대기 미루기
+=======
+//대기 미루기
+>>>>>>> cc14d7071756cac7457ce9270277ac765d931cbc
 app.post('/user/waiting/postpone', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
     var resPhNum = req.body.resPhNum;
@@ -339,6 +287,110 @@ app.post('/user/waiting/postpone', function(req, res) {
                         }
                         res.json({
                             'message' : '대기 미루기 완료'
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
+//대기자 명단 확인
+app.post('/kiosk/waitinginfo', function(req, res) {
+    var resPhNum = req.body.resPhNum;
+
+    var sql = 'SELECT WaitIndex, UserPhone, WaitHeadcount, WaitSeat, WaitisAccepted FROM (SELECT * FROM Waiting NATURAL JOIN Restaurants) Waiting WHERE resPhNum = ?;';
+    var params = [resPhNum];
+
+    connection.query(sql, params, function (err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        } 
+
+        res.json({
+            result
+        });
+    });
+});
+
+//과거 대기 손님 리스트
+app.post('/kiosk/waited', function(req, res) {
+    var resPhNum = req.body.resPhNum;
+
+    var sql = 'SELECT * From Waited WHERE resPhNuM = ? AND WaitisAccepted = 2;';
+    var params = [resPhNum];
+
+    connection.query(sql, params, function (err, result) {
+        if (err) {
+            console.log(err);
+            return;
+        } 
+
+        res.json({
+            result
+        });
+    });
+});
+
+// 대기 미루기
+app.post('/user/waiting/postpone', function(req, res) {
+    var WaitIndex = req.body.WaitIndex;
+    var resPhNum = req.body.resPhNum;
+
+    var sql1 = 'SET @tmp = ?; SET @back = (SELECT WaitIndex FROM Waiting WHERE (resPhNum = ? AND WaitIndex >= @tmp) ORDER BY WaitIndex DESC LIMIT 1,1);'; // 변수 설정
+    var sql2 = 'SELECT Stamp From Users WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = @tmp);'; // stamp 개수 가져오기
+    var sql3 = 'UPDATE Users SET Stamp = Stamp - 1 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = @tmp);'; // stamp가 남아있다면, 개수 update
+    var sql4 = 'UPDATE Waiting SET WaitIndex = -1 WHERE WaitIndex = @tmp;';
+    var sql5 = 'UPDATE Waiting SET WaitIndex = @tmp WHERE WaitIndex = @back;';
+    var sql6 = 'UPDATE Waiting SET WaitIndex = @back WHERE WaitIndex = -1;';
+    var params1 = [WaitIndex, resPhNum];
+
+    sql1 = mysql.format(sql1, params1);
+
+    // 변수 설정
+    connection.query(sql1, function (err1, result1) {
+        if (err1) {
+            console.log(err1);
+            return;
+        }
+        // stamp 개수 가져오기
+        connection.query(sql2, function (err2, result2) {
+            if(err2) {
+                console.log(err2);
+                return;
+            }
+            if(result2[0] <= 0) {
+                res.json({
+                    'message' : '스탬프가 부족합니다.'
+                })
+                return;
+            }
+            // stamp가 남아있다면, 개수 update
+            connection.query(sql3, function (err3, result3) {
+                if(err3) {
+                    console.log(err3)
+                    return;
+                }
+                // 대기 미루기 실행
+                connection.query(sql4, function (err4, result4) {
+                    if(err4) {
+                        console.log(err4);
+                        return;
+                    }
+                    connection.query(sql5, function (err5, result5) {
+                        if(err5) {
+                            console.log(err5);
+                            return;
+                        }
+                        connection.query(sql6, function (err6, result6) {
+                            if(err6) {
+                                console.log(err6);
+                                return;
+                            }
+                            res.json({
+                                'message' : '대기 미루기 완료',
+                            });
                         });
                     });
                 });

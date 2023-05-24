@@ -181,29 +181,38 @@ app.post('/kiosk/waitinginfo', function(req, res) {
 app.post('/user/waiting/delete', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
 
-    var sql1 = 'DELETE FROM Waiting WHERE WaitIndex = ?;';
-    var sql2 = 'UPDATE Users SET userIsWaiting = 0 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = ?);';
+    var sql1 = 'UPDATE Users SET userIsWaiting = 0 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = ?);';
+    var sql2 = 'DELETE FROM Waiting WHERE WaitIndex = ?;';
+    var sql3 = 'UPDATE Restaurants SET  currWaiting = currWaiting - 1 WHERE Restaurants.resPhNum = (SELECT resPhNum From Waiting WHERE WaitIndex = ?);';
     var params1 = [WaitIndex];
     var params2 = [WaitIndex];
+    var params3 = [WaitIndex];
 
     sql1 = mysql.format(sql1, params1);
     sql2 = mysql.format(sql2, params2);
+    sql3 = mysql.format(sql3, params3);
 
     connection.query(sql1, function (err1, result1) {
         if (err1) {
             console.log(err1);
             return;
         }
-        message = '대기 신청이 취소되었습니다.';
-        res.json({
-            'WaitIndex' : WaitIndex,
-            'message' : message
-        });
     });
 
     connection.query(sql2, function (err2, result2) {
         if(err2) {
             console.log(err2);
+            return;
+        }
+        res.json({
+            'WaitIndex' : WaitIndex,
+            'message' : '대기 신청이 취소되었습니다.'
+        });
+    });
+    
+    connection.query(sql3, function (err3, result3) {
+        if (err1) {
+            console.log(err1);
             return;
         }
     });

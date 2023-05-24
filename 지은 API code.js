@@ -52,19 +52,31 @@ app.post('/user/waiting/insert', function(req, res) {
 
 // 유저 대기 걸기2
 // restaurants의 대기 시간에 따름
+// Restaurants 테이블 currWaiting +1
+// Users 테이블 UserIsWaiting = 1 변경
 app.post('/user/waiting/insert_time', function(req, res) {
     var UserPhone = req.body.UserPhone;
     var resPhNum = req.body.resPhNum;
     var Waitheadcount = req.body.Waitheadcount;
     var WaitTime = req.body.WaitTime;
     var WaitSeat = req.body.WaitSeat;
-    var WaitisAccepted = false;
+    var WaitisAccepted = 0;
+
     var sql1 = 'SELECT resWaitOpen, resWaitClose FROM Restaurants WHERE resPhNum = ?;';
     var sql2 = 'INSERT INTO Waiting (UserPhone, resPhNum, WaitHeadcount, WaitTime, WaitSeat, WaitisAccepted) VALUES(?, ?, ?, ?, ?, ?);';
+    var sql3 = 'UPDATE Restaurants SET currWaiting = currWaiting + 1 WHERE Restaurants.resPhNum = (SELECT resPhNum From Waiting WHERE UserPhone = ? AND WaitisAccepted = 0);';
+    var sql4 = 'UPDATE Users SET UserIsWaiting = 1 WHERE UserPhone = ?';
+
     var params1 = [resPhNum];
     var params2 = [UserPhone, resPhNum, Waitheadcount, WaitTime, WaitSeat, WaitisAccepted];
+    var params3 = [UserPhone];
+    var params4 = [UserPhone];
+
     sql1 = mysql.format(sql1, params1);
     sql2 = mysql.format(sql2, params2);
+    sql3 = mysql.format(sql3, params3);
+    sql4 = mysql.format(sql4, params4);
+
     // 대기 가능 시간인 지 확인
     connection.query(sql1, function(err1, result1) {
         if(err1) {
@@ -72,7 +84,9 @@ app.post('/user/waiting/insert_time', function(req, res) {
             res.json({
                 'message' : '에러 발생1'
             });
+            return;
         }
+
         var WTime = new Date(WaitTime).toTimeString().split(' ')[0];
         if (WTime < result1[0].resWaitOpen || WTime > result1[0].resWaitClose) {
             res.json({
@@ -87,17 +101,37 @@ app.post('/user/waiting/insert_time', function(req, res) {
                     res.json({
                         'message' : '에러 발생2'
                     });
-                } else {
-                    res.json({
-                        'UserPhone': UserPhone,
-                        'resPhNum': resPhNum,
-                        'Waitheadcount': Waitheadcount,
-                        'WaitTime': WaitTime,
-                        'WaitSeat': WaitSeat,
-                        'WaitisAccepted': WaitisAccepted,
-                        'message' : '등록 완료!'
-                    });
+                    return
                 }
+            });
+            // Restaurants 테이블 currWaiting +1
+            connection.query(sql3, function(err3, result3) {
+                if(err3) {
+                    console.log(err3);
+                    res.json({
+                        'message' : '에러 발생3'
+                    });
+                    return
+                }
+            });
+            // Users 테이블 UserIsWaiting = 1 변경
+            connection.query(sql4, function(err4, result4) {
+                if(err4) {
+                    console.log(err4);
+                    res.json({
+                        'message' : '에러 발생4'
+                    });
+                    return;
+                }
+                res.json({
+                    'UserPhone': UserPhone,
+                    'resPhNum': resPhNum,
+                    'Waitheadcount': Waitheadcount,
+                    'WaitTime': WaitTime,
+                    'WaitSeat': WaitSeat,
+                    'WaitisAccepted': WaitisAccepted,
+                    'message' : '등록 완료!'
+                });
             });
         }
     });
@@ -125,7 +159,7 @@ app.post('/user/waitindex', function(req, res) {
 app.post('/user/waited', function(req, res) {
     var UserPhone = req.body.UserPhone;
     
-    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg, resIdx, WaitisAccepted From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ? AND WaitisAccepted >= 2;';
+    var sql1 = 'SELECT UserPhone, resPhNum, acceptedTime, resName, resImg, resIdx, WaitisAccepted From (SELECT * FROM Waited NATURAL JOIN Restaurants) Waited WHERE UserPhone = ? AND WaitisAccepted >= 2 ORDER BY acceptedTime DESC;';
     var params1 =[UserPhone];
     sql1 = mysql.format(sql1, params1);
     connection.query(sql1, function (err1, result1) {
@@ -182,8 +216,8 @@ app.post('/user/waiting/delete', function(req, res) {
     var WaitIndex = req.body.WaitIndex;
 
     var sql1 = 'UPDATE Users SET userIsWaiting = 0 WHERE Users.UserPhone = (SELECT UserPhone From Waiting WHERE WaitIndex = ?);';
-    var sql2 = 'DELETE FROM Waiting WHERE WaitIndex = ?;';
-    var sql3 = 'UPDATE Restaurants SET  currWaiting = currWaiting - 1 WHERE Restaurants.resPhNum = (SELECT resPhNum From Waiting WHERE WaitIndex = ?);';
+    var sql2 = 'UPDATE Restaurants SET currWaiting = currWaiting - 1 WHERE Restaurants.resPhNum = (SELECT resPhNum From Waiting WHERE WaitIndex = ?);';
+    var sql3 = 'DELETE FROM Waiting WHERE WaitIndex = ?;';
     var params1 = [WaitIndex];
     var params2 = [WaitIndex];
     var params3 = [WaitIndex];
@@ -204,17 +238,17 @@ app.post('/user/waiting/delete', function(req, res) {
             console.log(err2);
             return;
         }
+    });
+    
+    connection.query(sql3, function (err3, result3) {
+        if (err3) {
+            console.log(err3);
+            return;
+        }
         res.json({
             'WaitIndex' : WaitIndex,
             'message' : '대기 신청이 취소되었습니다.'
         });
-    });
-    
-    connection.query(sql3, function (err3, result3) {
-        if (err1) {
-            console.log(err1);
-            return;
-        }
     });
 });
 
